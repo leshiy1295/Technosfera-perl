@@ -19,10 +19,25 @@ no warnings 'experimental';
 
 sub evaluate {
 	my $rpn = shift;
+	my @stack;
 
-	# ...
+	for my $elem (@$rpn) {
+		if ($elem =~ m{^[*/^+-]$}) {
+			my $operation = $elem eq '^' ? '**' : $elem;
+			die "No operands to complete operation $elem" if @stack < 2;
+			my $right = pop @stack;
+			my $left = pop @stack;
+			push @stack, eval "$left$operation$right";
+		} elsif ($elem =~ m{^U([+-])$}) {
+			die "No operands to complete operation $elem" if @stack < 1;
+			my $operand = pop @stack;
+			push @stack, eval "$1 $operand";
+		} else {
+			push @stack, $elem;
+		}
+	}
 
-	return 0;
+	return pop @stack;
 }
 
 1;

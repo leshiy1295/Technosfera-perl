@@ -25,12 +25,47 @@ BEGIN{
 }
 no warnings 'experimental';
 
-sub tokenize {
+sub tokenize($) {
 	chomp(my $expr = shift);
 	my @res;
 
-	# ...
+	@res = grep /[^\s]/, split m{((?<!e)[+-]|[*/()^]|\s+)}, $expr;
 
+	my $brackets = 0;
+	my $numericFound = 1;
+	while (my ($i, $symbol) = each @res) {
+		given ($symbol) {
+			when (/^\d*\.?\d*(?:e[-+]?\d+)?$/) { # Корректное число
+				$res[$i] = 0+$symbol; # Venus
+				$numericFound = 1;
+			}
+			when ("(") {
+				$brackets += 1;
+			}
+			when (")") {
+				$brackets -= 1;
+				die "Wrong brackets sequence" if $brackets < 0;
+				die "Not enough arguments for one-arg operation" unless $numericFound;
+			}
+			when (m{^[+-]$}) {
+				if ($i == 0 || $res[$i-1] eq "(" || $res[$i-1] =~ m{^(?:U[+-]|[*/^+-])$}) {
+					$res[$i] = "U$symbol";
+					$numericFound = 0; # После унарной операции должно быть число
+				} else {
+					continue; # Проверим +- как бинарную операцию дальше
+				}
+			}
+			when (m{^[*/^+-]$}) {
+				die "One-arg operation found before $symbol" if ($res[$i-1] =~ /U[+-]/);
+			}
+			default {
+				die "Bad: '$symbol'";
+			}
+		}
+	}
+
+	die "Wrong brackets sequence" if $brackets != 0;
+	die "Not enough arguments for one-arg operation" unless $numericFound;
 	return \@res;
 }
 
