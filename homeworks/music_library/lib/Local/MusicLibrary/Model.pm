@@ -27,7 +27,8 @@ sub MODEL_FIELDS_FORMAT {
 
 sub saveTrack {
   my $trackString = shift;
-  die qq/Track string '$trackString' has invalid format/ unless $trackString =~ m{
+  #die qq/Track string '$trackString' has invalid format/ unless $trackString =~ m{ # в тестах появилось ограничение на пустой STDERR
+  exit 1 unless $trackString =~ m{
     ^
       \./
       (?<band>[^/]+)
