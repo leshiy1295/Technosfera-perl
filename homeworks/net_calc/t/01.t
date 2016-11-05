@@ -69,7 +69,7 @@ for my $test (@$tests) {
 	while (my $id = shift @started_work) {
 		my $server = Local::TCP::Calc::Client->set_connect('127.0.0.1', $server_test->port);
 		my @res = Local::TCP::Calc::Client->do_request($server, Local::TCP::Calc::TYPE_CHECK_WORK(), [$id]);
-		if ($res[0] == Local::TCP::Calc::STATUS_WORK()) {
+		if ($res[0] == Local::TCP::Calc::STATUS_WORK() || $res[0] == Local::TCP::Calc::STATUS_NEW()) {
 			push @started_work, $id;
 		}
 		else {
