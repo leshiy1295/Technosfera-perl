@@ -37,6 +37,7 @@ sub evaluate {
 		}
 	}
 
+	die "Expected the only one value remained in operands stack - the result of an expression" unless @stack == 1;
 	return pop @stack;
 }
 
