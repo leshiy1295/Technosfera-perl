@@ -62,7 +62,7 @@ sub start {
                     $cv->end;
                     return;
                 } if $@;
-                my @filtered_urls = $self->_filter_urls($urls);
+                my @filtered_urls = $self->_filter_urls($urls, $url);
                 push @{$self->{queue}}, @filtered_urls;
                 $handler->();
                 $cv->end;
@@ -78,8 +78,8 @@ sub show_results {
     my ($self) = @_;
     my $top_count = Local::Crawler::Configuration->get_option('crawler.top_count');
     $top_count //= 10;
-    my @pages = $self->{db}->get_top($top_count);
     print "TOP-10\n";
+    my @pages = $self->{db}->get_top($top_count);
     for my $page (@pages) {
         printf("%s -> %d\n", $page->{url}, $page->{size});
     }
@@ -88,7 +88,7 @@ sub show_results {
 }
 
 sub _filter_urls {
-    my ($self, $urls) = @_;
+    my ($self, $urls, $base_url) = @_;
     my @filtered_urls;
     for my $url (@$urls) {
         next unless $url;
@@ -99,9 +99,18 @@ sub _filter_urls {
             $base_host =~ s{^http://(?:www\.)?}{};
             next if $host !~ m{(?:^|\.)$base_host/?$};
         }
+        elsif ($url =~ m{://} || $url =~ m{^mailto:}) {
+            next;
+        }
+        elsif ($url =~ m{^\.\./}) {
+            $base_url =~ m{^(.*)/.*$};
+            $url = "$1/$url";
+        }
         else {
             $url =~ s{^/?}{};
-            $url = "$self->{base_url}/$url";
+            $base_url =~ s{/?$}{};
+            $base_url =~ m{^(http://[^/]+)/?};
+            $url = "$1/$url";
         }
         push @filtered_urls, $url unless $self->{db}->get($url);
     }
