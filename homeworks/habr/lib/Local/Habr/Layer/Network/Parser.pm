@@ -151,6 +151,7 @@ sub _convert_to_number {
     my ($self, $string) = @_;
     my $c = 1;
     $string =~ s/\+//;
+    $string =~ s/\s//g;
     $c = -1 if $string =~ s/\x{2013}//;
     $string =~ s/,/./;
     $string =~ s/k/e3/;
