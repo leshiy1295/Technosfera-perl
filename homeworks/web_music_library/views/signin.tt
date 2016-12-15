@@ -1,0 +1,8 @@
+<h3>Вход</h3>
+<form action="/"><button type="submit">На главную</button></form><br>
+<form action="/signin" method="POST" onsubmit="document.getElementById('signin_button').disabled = true;">
+    <input type="hidden" name="requested_path" value="<% requested_path %>">
+    Логин: <input name="login" required="required" value="<% login %>">
+    Пароль: <input type="password" name="pass" required="required" value="<% pass %>">
+    <button type="submit" id="signin_button">Войти</button>
+</form>

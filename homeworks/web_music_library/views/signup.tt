@@ -1,0 +1,7 @@
+<h3>Регистрация нового пользователя</h3>
+<form action="/"><button type="submit">На главную</button></form><br>
+<form action="/signup" method="POST" onsubmit="document.getElementById('signup_button').disabled = true;">
+    Логин: <input name="login" required="required" value="<% login %>">
+    Пароль: <input type="password" name="pass" required="required" value="<% pass %>">
+    <button id="submit_button" type="submit">Зарегистрироваться</button>
+</form>

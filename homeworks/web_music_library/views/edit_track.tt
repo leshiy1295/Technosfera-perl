@@ -1,0 +1,9 @@
+<h3>Редактирование трека <% track_info.name %></h3>
+<form action="<% back_to_album_link %>"><button type="submit">Вернуться к альбому</button></form><br>
+<form action="" method="POST" onsubmit="document.getElementById('save_btn').disabled = true;" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+    Название трека: <input name="name" value="<% track_info.name %>" required="required"><br>
+    Формат: <input name="format" value="<% track_info.format %>" required="required"><br>
+    Изображение: <input id="image_file" type="file" name="image_file"> (<input type="checkbox" id="checkbox_delete" name="delete_image_file" onchange="document.getElementById('image_file').disabled = document.getElementById('checkbox_delete').checked;"> - удалить картинку) <input name="image_src" value="<% track_info.image_src %>"><br>
+    <br><button type="submit" id="save_btn">Сохранить</button>
+</form>

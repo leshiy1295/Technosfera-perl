@@ -1,0 +1,3 @@
+<h1>Music library</h1>
+<form action="/signin"><button type="submit">Вход</button></form><br>
+<form action="/signup"><button type="submit">Регистрация</button></form>

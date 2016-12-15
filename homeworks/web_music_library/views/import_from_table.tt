@@ -1,0 +1,7 @@
+<h3>Импорт альбомов и треков из таблицы</h3>
+<form action="/profile"><button type="submit">Вернуться к профилю</button></form><br>
+<form action="" method="POST" onsubmit="document.getElementById('import_btn').disabled = true;">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>"> 
+    Табличка из ДЗ: <textarea name="table"><% table %></textarea><br>
+    <br><button id="import_btn" type="submit">Импортировать</button>
+</form>

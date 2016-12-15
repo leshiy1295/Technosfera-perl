@@ -1,0 +1,22 @@
+<h3>Профиль пользователя <% login %></h3>
+<form action="/logout" method="POST" onsubmit="document.getElementById('logout_button').disabled = true;">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+    <button id="logout_button" type="submit">Выйти</button>
+</form><br>
+<form action="/remove" method="POST" onsubmit="document.getElementById('remove_button').disabled = true;">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+    <button id="remove_button" type="submit">Удалить аккаунт</button>
+</form>
+<% IF login == 'admin' %>
+<br><form action="/users"><button type="submit">Список зарегистрированных пользователей</button></form>
+<% END %>
+<br>Список альбомов<% IF not albums %> пуст<% END %><br>
+<% IF albums %>
+    <ul>
+    <% FOR album IN albums %>
+        <li><a href="/albums/<% album.album_id %>"><% album.album_name %></a></li>
+    <% END %>
+    </ul>
+<% END %>
+<br><form action="/albums/add"><button>Добавить новый альбом</button></form>
+<br><form action="/import_from_table"><button type="submit">Импортировать данные из таблицы</button></form>

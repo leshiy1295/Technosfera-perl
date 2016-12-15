@@ -1,0 +1,28 @@
+<% IF not album_info or not user_has_permissions %><h3 class="error">Запрашиваемый альбом не найден</h3><% END %>
+<form action="/profile"><button type="submit">Вернуться к профилю</button></form>
+<% IF album_info and user_has_permissions %>
+    <h3>Информация об альбоме:</h3>
+    Название альбома: "<% album_info.album_name %>"<br>
+    Название группы: <% album_info.album_group_name %><br>
+    Год выпуска: <% album_info.album_year %><br>
+    <form action="<% self_url %>/edit"><button type="submit">Редактировать информацию об альбоме</button></form>
+    <h3>Список треков:<% IF not tracks_info %> пуст<% END %></h3>
+    <% IF tracks_info %>
+        <table border="1">
+            <tr><th>Картинка</th><th>Из файла</th><th>Название трека</th><th>Формат</th><th>Действия</th></tr>
+        <% FOR track IN tracks_info %>
+            <tr><td><img src="<% track.track_image_src %>"></td><td><img src="<% track.track_image_file %>"></td><td><% track.track_name %></td><td><% track.track_format %></td>
+            <td>
+                <form action="<% self_url %>/tracks/<% track.track_id %>/edit"><button type="submit">Редактировать</button></form>
+                <form action="<% self_url %>/tracks/delete" method="POST" onsubmit="document.getElementById('<% track.track_id %>detete_button').disabled = true;">
+                    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+                    <input type="hidden" name="track_id" value="<% track.track_id %>">
+                    <button type="submit" id="<% track.track_id %>delete_button">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        <% END %>
+        </table>
+    <% END %>
+    <br><form action="<% self_url %>/tracks/add"><button type="submit">Добавить трек</button></form>
+<% END %>

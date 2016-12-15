@@ -1,0 +1,9 @@
+<h3>Добавление нового альбома</h3>
+<form action="/profile"><button type="submit">Вернуться к профилю</button></form><br>
+<form action="/albums/add" method="POST" onsubmit="document.getElementById('add_button').disabled = true;">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+    Название альбома: <input name="name" required="required" value="<% name %>"><br>
+    Год создания: <input name="year" required="required" value="<% year %>"><br>
+    Название группы: <input name="group_name" required="required" value="<% group_name %>"><br>
+    <br><button type="submit" id="add_button">Добавить альбом</button>
+</form>

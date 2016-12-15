@@ -1,0 +1,9 @@
+<h3>Добавление трека в альбом</h3>
+<form action="<% back_to_album_link %>"><button type="submit">Вернуться к альбому</button></form><br>
+<form method="POST" action="" onsubmit="document.getElementById('add_button').disabled = true;" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">  
+    Название трека: <input name="name" required="required" value="<% name %>"><br>
+    Формат: <input name="format" required="required" value="<% format %>"><br>
+    Изображение: <input type="file" name="image_file"><input name="image_src" value="<% image_src %>"><br>
+    <br><button type="submit" id="add_button">Добавить трек</button>
+</form>

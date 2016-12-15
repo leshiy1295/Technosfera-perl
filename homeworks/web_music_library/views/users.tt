@@ -1,0 +1,7 @@
+<h3>Список зарегистрированных пользователей</h3>
+<form action="/profile"><button type="submit">Вернуться к профилю</button></form>
+<ul>
+<% FOR user IN users %>
+    <li><% user.login %></li>
+<% END %>
+</ul>

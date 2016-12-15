@@ -1,0 +1,9 @@
+<h3>Редактирование альбома <% album_info.name %></h3>
+<form action="<% back_to_album_link %>"><button type="submit">Вернуться к альбому</button></form><br>
+<form action="" method="POST" onsubmit="document.getElementById('save_btn').disabled = true;">
+    <input type="hidden" name="csrf_token" value="<% csrf_token %>">
+    Название альбома: <input name="name" value="<% album_info.name %>" required="required"><br>
+    Год: <input name="year" value="<% album_info.year %>" required="required"><br>
+    Название группы: <input name="group_name" value="<% album_info.group_name %>" required="required"><br>
+    <br><button type="submit" id="save_btn">Сохранить</button>
+</form>
