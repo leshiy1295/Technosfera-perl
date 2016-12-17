@@ -3,23 +3,48 @@ package Local::Crawler;
 use strict;
 use warnings;
 
-use Local::Crawler::Fetcher;
-use Local::Crawler::Parser;
-use Local::Crawler::DB;
-use Local::Crawler::Configuration;
 use AE;
 use Guard;
+use AnyEvent::HTTP;
+use Web::Query;
+use Scalar::Util qw(weaken);
+use Config::Simple ();
+
+our $VERSION = v1.0;
+
+sub extract_links {
+    my ($html) = @_;
+    return wq($html)->find('a')->map(sub { my ($i, $elem) = @_; $elem->attr('href'); });
+}
+
+$AnyEvent::HTTP::MAX_PER_HOST = 100;
+
+sub fetch {
+    my ($url, $cb) = @_;
+    my $g;
+    $g = http_get $url, sub {
+        $cb->(@_);
+        undef $g;
+    };
+    return $g;
+}
 
 sub new {
     my ($class, %args) = @_;
-    die 'Usage: Local::Crawler->new(base_url => $url)' unless $args{base_url};
+    die 'Usage: Local::Crawler->new(config => $config)' unless $args{config};
+    my $config = {};
+    Config::Simple->import_from($args{config}, $config);
     my $self = {
-        base_url => $args{base_url},
-        queue => [$args{base_url}],
-        max_links => $args{max_links}
+        base_url => $config->{'crawler.base_url'},
+        queue => [$config->{'crawler.base_url'}],
+        analyzed => {},
+        in_progress => 0,
+        pages => [],
+        overall_size => 0,
+        max_pages => $config->{'crawler.max_pages'},
+        config => $config
     };
     $self->{base_url} =~ s{/?$}{};
-    $self->{db} = Local::Crawler::DB->new;
     return bless $self, $class;
 }
 
@@ -28,34 +53,34 @@ sub start {
     my $cv = AE::cv;
     $cv->begin;
     my $handler; $handler = sub {
+        my $handler = $handler or return;
         while (@{$self->{queue}}) {
-            my $current_count = $self->{db}->get_count;
-            return unless $current_count < $self->{max_links};
+            return unless @{$self->{pages}} + $self->{in_progress} < $self->{max_pages};
             my $url = shift @{$self->{queue}};
-            next if $self->{db}->get($url);
-            printf "Started %s (%d/%d)\n", $url, $current_count + 1, $self->{max_links};
-            $self->{db}->save({url => $url});
+            next if exists $self->{analyzed}->{$url};
+            $self->{analyzed}->{$url} = 1;
+            $self->{in_progress} += 1;
+            printf "Started %d/%d -> %s\n", @{$self->{pages}} + $self->{in_progress}, $self->{max_pages}, $url;
             $cv->begin;
-            Local::Crawler::Fetcher->fetch($url, sub {
+            fetch($url, sub {
                 my ($body, $headers) = @_;
+                $self->{in_progress} -= 1;
                 do {
                     warn "Error while fetching $url: $headers->{Status}, $headers->{Reason}\n";
-                    $self->{db}->delete($url);
                     $cv->end;
                     return;
                 } unless $body && $headers->{Status} =~ /^2/;
-                my $current_ready_count = $self->{db}->get_ready_count;
                 do {
-                    $self->{db}->delete($url);
                     $cv->end;
                     return;
-                } unless $current_ready_count < $self->{max_links};
-                printf "Finished %s (%d/%d)\n", $url, $current_ready_count + 1, $self->{max_links};
+                } unless @{$self->{pages}} < $self->{max_pages};
+                printf "Finished %d/%d -> %s\n", @{$self->{pages}} + 1, $self->{max_pages}, $url;
                 my $size = length $body;
-                $self->{db}->update({url => $url, size => $size, body => $body});
+                push $self->{pages}, { url => $url, size => $size };
+                $self->{overall_size} += $size;
                 my $urls;
                 eval {
-                    $urls = Local::Crawler::Parser->extract_links($body);
+                    $urls = extract_links($body);
                 };
                 do {
                     warn "Error while parsing $url: $@";
@@ -71,20 +96,21 @@ sub start {
     }; $handler->();
     $cv->end;
     $cv->recv;
-    print "Totally crawled ${\do{$self->{db}->get_ready_count}} links\n";
+    weaken($handler);
+    print "Totally crawled ${\do{scalar(@{$self->{pages}})}} pages\n";
 }
 
 sub show_results {
     my ($self) = @_;
-    my $top_count = Local::Crawler::Configuration->get_option('crawler.top_count');
+    my $top_count = $self->{config}->{'crawler.top_count'};
     $top_count //= 10;
-    print "TOP-10\n";
-    my @pages = $self->{db}->get_top($top_count);
-    for my $page (@pages) {
+    print "TOP-$top_count\n";
+    my @sorted_pages = sort { $b->{size} <=> $a->{size}; } @{$self->{pages}};
+    my @top_pages = splice @sorted_pages, 0, $top_count - 1;
+    for my $page (@top_pages) {
         printf("%s -> %d\n", $page->{url}, $page->{size});
     }
-    my $overall_size = $self->{db}->get_overall_size;
-    print "Overall size: $overall_size\n";
+    print "Overall size: $self->{overall_size}\n";
 }
 
 sub _filter_urls {
@@ -112,7 +138,7 @@ sub _filter_urls {
             $base_url =~ m{^(http://[^/]+)/?};
             $url = "$1/$url";
         }
-        push @filtered_urls, $url unless $self->{db}->get($url);
+        push @filtered_urls, $url unless exists $self->{analyzed}->{$url};
     }
     return @filtered_urls;
 }
