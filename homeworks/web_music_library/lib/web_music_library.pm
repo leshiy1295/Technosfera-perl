@@ -20,11 +20,16 @@ hook before => sub {
     if (session('login') && request->dispatch_path =~ qr{^/(?:index|signin|signup)?$}) {
         redirect '/profile';
     }
+    if (session('login') && request->is_post) {
+        my $csrf_token = param('csrf_token');
+        redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
+    }
 };
 
 hook before_template_render => sub {
     my $tokens = shift;
     $tokens->{self_url} = request->dispatch_path;
+    $tokens->{csrf_token} = generate_csrf_token(session('secret')) if session('login');
 };
 
 sub parse_table {
@@ -62,14 +67,10 @@ sub parse_table {
 }
 
 get '/import_from_table' => sub {
-    template 'import_from_table', {
-        csrf_token => generate_csrf_token(session('secret'))
-    };
+    template 'import_from_table', {};
 };
 
 post '/import_from_table' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $table = param('table');
     my @err;
     if (!$table) {
@@ -83,7 +84,6 @@ post '/import_from_table' => sub {
         $table = encode_entities($table, '<&"\'>');
         $table =~ s/ /&nbsp;/g;
         return template 'import_from_table', {
-            csrf_token => generate_csrf_token(session('secret')),
             table => $table,
             err => \@err
         };
@@ -111,8 +111,6 @@ post '/import_from_table' => sub {
 };
 
 post '/albums/:album_id/tracks/:track_id/edit' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $album_id = param('album_id');
     my $track_id = unpack 'Q', pack 'H*', param('track_id'); 
     my $back_to_album_link = "/albums/$album_id";
@@ -175,7 +173,6 @@ post '/albums/:album_id/tracks/:track_id/edit' => sub {
             $image_src ? (image_src => $image_src) : ()
         };
         return template 'edit_track', {
-            csrf_token => generate_csrf_token(session('secret')),
             back_to_album_link => $back_to_album_link,
             track_info => $track_info,
             err => \@err,
@@ -204,15 +201,12 @@ get '/albums/:album_id/tracks/:track_id/edit' => sub {
     %$track_info = map { ($_ => encode_entities($track_info->{$_}, '<&"\'>')) } keys %$track_info;
     $back_to_album_link = encode_entities($back_to_album_link, '<&"\'>');
     template 'edit_track', {
-        csrf_token => generate_csrf_token(session('secret')),
         back_to_album_link => $back_to_album_link,
         $track_info ? (track_info => $track_info) : ()
     };
 };
 
 post '/albums/:album_id/edit' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $album_id = param('album_id');
     my $back_to_album_link = "/albums/$album_id";
     $album_id = unpack 'Q', pack 'H*', $album_id;
@@ -246,7 +240,6 @@ post '/albums/:album_id/edit' => sub {
             group_name => $group_name
         };
         return template 'edit_album', {
-            csrf_token => generate_csrf_token(session('secret')),
             back_to_album_link => $back_to_album_link,
             album_info => $album_info,
             err => \@err
@@ -273,15 +266,12 @@ get '/albums/:album_id/edit' => sub {
     %$album_info = map { ($_ => encode_entities($album_info->{$_}, '<&"\'>')) } keys %$album_info;
     $back_to_album_link = encode_entities($back_to_album_link, '<&"\'>');
     template 'edit_album', {
-        csrf_token => generate_csrf_token(session('secret')),
         back_to_album_link => $back_to_album_link,
         $album_info ? (album_info => $album_info) : ()
     };
 };
 
 post '/albums/:album_id/tracks/delete' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $album_id = param('album_id');
     my $back_to_album_link = "/albums/$album_id";
     $album_id = unpack 'Q', pack 'H*', $album_id;
@@ -312,13 +302,10 @@ get '/albums/:album_id/tracks/add' => sub {
     $back_to_album_link = encode_entities($back_to_album_link, '<&"\'>');
     template 'add_track', { 
         back_to_album_link => $back_to_album_link,
-        csrf_token => generate_csrf_token(session('secret'))
     };
 };
 
 post '/albums/:album_id/tracks/add' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $album_id = param('album_id');
     my $back_to_album_link = "/albums/$album_id";
     $album_id = unpack 'Q', pack 'H*', $album_id;
@@ -366,7 +353,6 @@ post '/albums/:album_id/tracks/add' => sub {
         $image_src = encode_entities($image_src, '<&"\'>');
         return template 'add_track', {
             back_to_album_link => $back_to_album_link,
-            csrf_token => generate_csrf_token(session('secret')),
             name => $name,
             format => $format,
             image_src => $image_src,
@@ -384,8 +370,6 @@ get '/albums/add' => sub {
 };
 
 post '/albums/add' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     my $name = param('name');
     my $year = param('year');
     my $group_name = param('group_name');
@@ -448,21 +432,16 @@ get '/albums/:id' => sub {
     %$album_info = map { ($_ => encode_entities($album_info->{$_}, '<>&"\'')) } keys %$album_info;
     template 'album', {
                        user_has_permissions => $user_has_permissions,
-                       csrf_token => generate_csrf_token(session('secret')),
                        keys %$album_info ? (album_info => $album_info) : (),
                        @$tracks_info ? (tracks_info => $tracks_info) : ()};
 };
 
 post '/logout' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     context->destroy_session;
     redirect '/';
 };
 
 post '/remove' => sub {
-    my $csrf_token = param('csrf_token');
-    redirect '/profile' unless session('secret') && check_csrf_token($csrf_token, session('secret'));
     database->quick_delete('user', {login => session('login')});
     context->destroy_session;
     redirect '/';
@@ -483,7 +462,6 @@ get '/profile' => sub {
     my $albums = $sth->fetchall_arrayref({});
     @$albums = map { my $album = $_; %$album = map { ($_ => encode_entities($album->{$_}, '<>&"\'')) } keys %$album; $album->{album_id} = unpack 'H*', pack 'Q', $album->{album_id}; $album; } @$albums;
     template 'profile', { login => encode_entities(session('login'), '<>&"\''),
-                          csrf_token => generate_csrf_token(session('secret')),
                           @$albums ? (albums => $albums) : () };
 };
 
